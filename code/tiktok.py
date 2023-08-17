@@ -32,14 +32,6 @@ def get_cookie(channel: str):
 async def dump_channel_videos(channel: str, channelDump: str):
     # Create default files
 
-    if not os.path.exists("data/dumped.json"):
-        with open("data/dumped.json", "w") as file:
-            json.dump({"dumped": []}, file, indent=4)
-
-    if not os.path.exists("data/uploaded.json"):
-        with open("data/uploaded.json", "w") as file:
-            json.dump({"uploaded": []}, file, indent=4)
-
     cookie = get_cookie(channel)
     ms_token = cookie["msToken"]
     videoUrls = []
@@ -91,7 +83,7 @@ async def progress(current, total):
 
 async def telegram_download(videoUrls: list):
     """Connect, get the videos without the watermark and then delete them from the chat"""
-    async with Client("telegram_sessions/bot") as client:
+    async with Client("telegram_session/bot") as client:
         for videoDict in videoUrls:
             # Only if the video is not present here
             if not os.path.exists(f"videos/{videoDict['videoId']}.mp4"):
@@ -129,10 +121,36 @@ def upload(channel: str, channelDump: str):
     #    json.dump(videosAvailable, file, indent=4)
 
 
+def setup():
+
+    # Create files
+    if not os.path.exists("data/dumped.json"):
+        with open("data/dumped.json", "w") as file:
+            json.dump({"dumped": []}, file, indent=4)
+
+    if not os.path.exists("data/uploaded.json"):
+        with open("data/uploaded.json", "w") as file:
+            json.dump({"uploaded": []}, file, indent=4)
+
+    # Create dirs
+    if not os.path.isdir("cookies"):
+        os.mkdir("cookies")
+
+    if not os.path.isdir("videos"):
+        os.mkdir("videos")
+
+    if not os.path.isdir("data"):
+        os.mkdir("data")
+
+    if not os.path.isdir("telegram_session"):
+        os.mkdir("telegram_session")
+
+
 if __name__ == "__main__":
     channel = "__copyandpaste"
     channelDump = "__copyandpaste"
+    setup()
     if channel not in CHANNELS:
         raise Exception("Wrong channel name")
-    # asyncio.run(dump_channel_videos(channel, channelDump))
-    upload(channel, channelDump)
+    asyncio.run(dump_channel_videos(channel, channelDump))
+    # upload(channel, channelDump)

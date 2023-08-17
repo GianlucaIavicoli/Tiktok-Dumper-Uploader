@@ -1,0 +1,2 @@
+- [] Add the proxy usage while scraping videos from tiktok
+- [] Fix the get_proxy function in proxy.py for both IPv4 and IPv6. Additionally, ensure that the username of the account is included in the description of each individual proxy when making a purchase. Lastly, implement a username checking mechanism when fetching the proxies.
