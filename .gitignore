@@ -167,6 +167,7 @@ code/*.mp3
 *.mp4
 code/background/*.mp4
 
-code/responses.txt
-code/test.ipynb
-code/accounts.txt
+code/videos
+code/telegram_sessions
+code/data
+code/cookies
