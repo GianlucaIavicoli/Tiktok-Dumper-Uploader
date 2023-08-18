@@ -35,9 +35,10 @@ async def dump_channel_videos(channel: str, channelDump: str):
     cookie = get_cookie(channel)
     ms_token = cookie["msToken"]
     videoUrls = []
+
+    # TODO Add the proxy usage while scraping videos from tiktok
     async with TikTokApi() as api:
         await api.create_sessions(ms_tokens=[ms_token], num_sessions=1, sleep_after=10, cookies=[cookie])
-
         async for video in api.user(username=channelDump).videos(count=LIMIT_VIDEOS_TO_DUMP):
             username = video.author.username
             videoId = video.id
@@ -99,26 +100,32 @@ async def telegram_download(videoUrls: list):
 
 def upload(channel: str, channelDump: str):
     with open(file="data/dumped.json", mode="r", encoding="utf-8") as file:
-        videosDict = json.load(file)
+        videosDumpedDict = json.load(file)
+
+    with open(file="data/uploaded.json", mode="r", encoding="utf-8") as file:
+        videosUploadedDict = json.load(file)
 
     videosAvailable = []
-    for video in videosDict['dumped']:
+    for video in videosDumpedDict['dumped']:
         if video['username'] == channelDump:
             videosAvailable.append(video)
 
     videoToDump = random.choice(videosAvailable)
 
     upload_video(f"videos/{videoToDump['videoId']}.mp4", description=videoToDump['description'],
-                 song=videoToDump['song'], cookies=f"cookies/{channel}.txt", headless=False, browser='chrome')
+                 song=videoToDump['song'], channel=channel, cookies=f"cookies/{channel}.txt", headless=False, browser='chrome')
 
-    # os.remove(f"videos/{videoToDump['videoId']}.mp4")
-    # videosAvailable.remove(videoToDump)
-    #
-    # with open(file="data/uploaded.json", mode="w", encoding="utf-8") as file:
-    #    json.dump(videoToDump, file, indent=4)
-    #
-    # with open(file="data/dumped.json", mode="w", encoding="utf-8") as file:
-    #    json.dump(videosAvailable, file, indent=4)
+    os.remove(f"videos/{videoToDump['videoId']}.mp4")
+    videosAvailable.remove(videoToDump)
+
+    # Add the uploaded video in the right json after being removed from the "dumped.json"
+    videosUploadedDict['uploaded'].append(videoToDump)
+
+    with open(file="data/uploaded.json", mode="w", encoding="utf-8") as file:
+        json.dump(videosUploadedDict, file, indent=4)
+
+    with open(file="data/dumped.json", mode="w", encoding="utf-8") as file:
+        json.dump({"dumped": videosAvailable}, file, indent=4)
 
 
 def setup():
@@ -152,5 +159,5 @@ if __name__ == "__main__":
     setup()
     if channel not in CHANNELS:
         raise Exception("Wrong channel name")
-    asyncio.run(dump_channel_videos(channel, channelDump))
-    # upload(channel, channelDump)
+    # asyncio.run(dump_channel_videos(channel, channelDump))
+    upload(channel, channelDump)

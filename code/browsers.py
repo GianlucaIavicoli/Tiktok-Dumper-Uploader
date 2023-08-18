@@ -34,10 +34,10 @@ def get_browser(name: str = 'chrome', options=None, *args, **kwargs) -> webdrive
     service = get_service(name=name)
     if service:
         driver = driver_to_use(
-            service=service, options=options)
+            service=service, options=options, seleniumwire_options=seleniumwireOptions)
     else:
         driver = driver_to_use(
-            options=options)
+            options=options, seleniumwire_options=seleniumwireOptions)
 
     driver.implicitly_wait(config['implicit_wait'])
     driver.execute_script(
@@ -85,7 +85,7 @@ def chrome_defaults(*args, headless: bool = False, **kwargs) -> ChromeOptions:
     """
     Creates Chrome with Options
     """
-
+    username = kwargs.get("channel")  # Used to pick the right proxy
     options = ChromeOptions()
 
     # regular
@@ -95,14 +95,14 @@ def chrome_defaults(*args, headless: bool = False, **kwargs) -> ChromeOptions:
     options.add_argument('--disable-notifications')
     options.add_argument('--disable-infobars')
     options.add_argument('--disable-extensions')
-    options.add_argument(f"user-agent={RANDOM_USER_AGENT}")
+    # options.add_argument(f"user-agent={RANDOM_USER_AGENT}")
     options.add_argument('--start-maximized')
 
     # experimental
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
-    proxyUrl = get_proxy()
+    proxyUrl = get_proxy(username)
     seleniumwireOptions = {
         "proxy": {
             "http": proxyUrl,

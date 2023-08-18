@@ -6,12 +6,9 @@ Key Functions
 upload_video : Uploads a single TikTok video
 upload_videos : Uploads multiple TikTok videos
 """
-import sys
 from os.path import abspath, exists
 from typing import List
 import time
-from time import sleep
-from typing import Union
 from selenium.webdriver.common.by import By
 
 from selenium.webdriver.common.action_chains import ActionChains
@@ -24,9 +21,11 @@ from tiktok_uploader.auth import AuthBackend
 from tiktok_uploader import config, logger
 from tiktok_uploader.utils import bold, green
 
+config['explicit_wait'] = 300  # Default is 60, but with proxy its not enough
+
 
 def upload_video(filename=None, description='', username='',
-                 password='', song=Union[str, None], cookies='', sessionid=None, cookies_list=None, *args, **kwargs):
+                 password='', cookies='', sessionid=None, cookies_list=None, *args, **kwargs):
     """
     Uploads a single TikTok video.
 
@@ -50,12 +49,11 @@ def upload_video(filename=None, description='', username='',
     return upload_videos(
         videos=[{'path': filename, 'description': description}],
         auth=auth,
-        song=song,
         *args, **kwargs
     )
 
 
-def upload_videos(videos: list = None, auth: AuthBackend = None, song=Union[str, None], browser='chrome',
+def upload_videos(videos: list = None, auth: AuthBackend = None, browser='chrome',
                   browser_agent=None, on_complete=None, headless=False, num_retires: int = 1, *args, **kwargs):
     """
     Uploads multiple videos to TikTok
@@ -116,20 +114,22 @@ def upload_videos(videos: list = None, auth: AuthBackend = None, song=Union[str,
                 print(f'{path} is invalid, skipping')
                 failed.append(video)
                 continue
+            try:
+                cookie_banner_element = driver.find_element(
+                    By.CSS_SELECTOR, "tiktok-cookie-banner[locale='en']")
+                shadow_root = driver.execute_script(
+                    'return arguments[0].shadowRoot', cookie_banner_element)
+                cookie_button = shadow_root.find_element(
+                    By.CLASS_NAME, "button-wrapper").find_element(By.TAG_NAME, "button")
+                cookie_button.click()
+            except:
+                logger.debug(green('No cookies banner found'))
+                pass
 
-            ###
-            cookie_banner_element = driver.find_element(
-                By.CSS_SELECTOR, "tiktok-cookie-banner[locale='en']")
-            shadow_root = driver.execute_script(
-                'return arguments[0].shadowRoot', cookie_banner_element)
-            cookie_button = shadow_root.find_element(
-                By.CLASS_NAME, "button-wrapper").find_element(By.TAG_NAME, "button")
-            cookie_button.click()
-            ###
+            finally:
+                logger.debug(green('Cookie declined'))
 
-            logger.debug(green('Cookie declined'))
-
-            complete_upload_form(driver, path, description, song=song,
+            complete_upload_form(driver, path, description,
                                  num_retires=num_retires, headless=headless,
                                  *args, **kwargs)
         except Exception as exception:
@@ -146,7 +146,7 @@ def upload_videos(videos: list = None, auth: AuthBackend = None, song=Union[str,
     return failed
 
 
-def complete_upload_form(driver, path: str, description: str, song: Union[str, None], headless=False, *args, **kwargs) -> None:
+def complete_upload_form(driver, path: str, description: str, headless=False, *args, **kwargs) -> None:
     """
     Actually uploades each video
 
@@ -160,7 +160,8 @@ def complete_upload_form(driver, path: str, description: str, song: Union[str, N
     _go_to_upload(driver)
     _set_video(driver, path=path, **kwargs)
     _set_interactivity(driver, **kwargs)
-    _set_description(driver, description, song)
+    _set_description(driver, description)
+    _set_song(driver, **kwargs)
     _post_video(driver)
 
 
@@ -189,7 +190,7 @@ def _go_to_upload(driver) -> None:
     WebDriverWait(driver, config['explicit_wait']).until(root_selector)
 
 
-def _set_description(driver, description: str, song: Union[str, None]) -> None:
+def _set_description(driver, description: str) -> None:
     """
     Sets the description of the video
 
@@ -199,6 +200,7 @@ def _set_description(driver, description: str, song: Union[str, None]) -> None:
     description : str
         The description to set
     """
+
     if description is None:
         # if no description is provided, filename
         return
@@ -265,91 +267,104 @@ def _set_description(driver, description: str, song: Union[str, None]) -> None:
                     nearest_mention, nearest_hash, description)
                 driver.execute_script(
                     "arguments[0].textContent = arguments[1];", desc, description[:min_index])
+
                 logger.debug(green('Description sent'))
-
-                # Setting music to the video ### ADDED
-
-                if song is not None:
-                    root = driver.find_element(By.ID, "root")
-                    editVideoButton = root.find_element(
-                        By.CLASS_NAME, "action-button")
-                    editVideoButton.click()
-                    logger.debug(green('Edit music button clicked'))
-
-                    # Setting music to the video
-
-                    musicSection = driver.find_element(
-                        By.CLASS_NAME, "modalBody")
-                    searchBar = musicSection.find_element(
-                        By.CLASS_NAME, "search-bar-input")
-                    searchBar.send_keys(song)
-                    searchBar.send_keys(Keys.ENTER)
-
-                    actions = ActionChains(driver)
-                    listContainer = driver.find_element(
-                        By.CLASS_NAME, "list-container")
-                    musics = listContainer.find_elements(
-                        By.CLASS_NAME, "music-card-container")
-                    musics = musics[0]
-
-                    musicCardCover = musics.find_element(
-                        By.CLASS_NAME, "music-card-cover")
-                    actions.move_to_element(musicCardCover)
-                    actions.perform()
-
-                    actions.reset_actions()
-                    actions.move_by_offset(545, 305)
-                    actions.perform()
-
-                    useButton = WebDriverWait(musics, 10).until(
-                        EC.visibility_of_element_located((By.CLASS_NAME, "css-m2fcla")))
-                    useButton.click()
-                    logger.debug(green('Music selected'))
-
-                    # Set volume to 1%
-
-                    trackElement = driver.find_element(By.CLASS_NAME, "track")
-                    trackOperations = trackElement.find_element(
-                        By.CLASS_NAME, "operation-group")
-                    audioOperation = trackOperations.find_element(
-                        By.CLASS_NAME, "audioOperation")
-                    audioImage = audioOperation.find_element(
-                        By.TAG_NAME, "img")
-                    audioImage.click()
-
-                    volumeContainer = audioOperation.find_element(
-                        By.CLASS_NAME, "volume-adjust-container")
-                    # [1] because we're taking the added song, not the original one
-                    addedSongVolumeContainer = volumeContainer.find_elements(
-                        By.CLASS_NAME, "volume-line")[1]
-                    songVolumeBar = addedSongVolumeContainer.find_element(
-                        By.CLASS_NAME, "volume-range")
-                    songVolumeInput = songVolumeBar.find_element(
-                        By.CLASS_NAME, "scaleInput")
-
-                    volumeActions = ActionChains(driver)
-                    volumeActions.move_to_element(songVolumeInput).perform()
-                    volumeActions.reset_actions()
-                    volumeActions.move_by_offset(0, 0).perform()
-                    volumeActions.move_by_offset(627, 600).perform()
-                    volumeActions.click().perform()
-                    logger.debug(green('Volume descreased to 1%'))
-
-                    # Saving the edit
-
-                    saveEditContainer = driver.find_element(
-                        By.CLASS_NAME, "modalHeaderContainer")
-                    saveEditButton = saveEditContainer.find_elements(By.TAG_NAME, "button")[
-                        1]  # [1] because we need the 2nd button in order
-                    saveEditButton.click()
-
-                    logger.debug(green('Song added correctly'))
 
                 description = description[min_index:]
     except Exception as exception:
         print('Failed to set description: ', exception)
         _clear(desc)
         desc.send_keys(saved_description)  # if fail, use saved description
+
+
+def _set_song(driver, **kwarg):
+    """
+    Click the edit button, search and select the right music, decrease the volume to 1% then save.
+
+    Parameters
+    ----------
+    driver : selenium.webdriver
+        The selenium webdriver to use for uploading
+
+    """
+    song = kwarg.get("song")
+
+    if song is not None:
+        editVideoButton = WebDriverWait(
+            driver, config['explicit_wait']).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "action-button")))
+
+        editVideoButton.click()
+
+        logger.debug(green('Edit music button clicked'))
+
+        # Setting music to the video
+
+        musicSection = WebDriverWait(driver, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "modalBody")))
+        searchBar = WebDriverWait(musicSection, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "search-bar-input")))
+        searchBar.send_keys(song)
+        searchBar.send_keys(Keys.ENTER)
+
+        listContainer = WebDriverWait(driver, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "list-container")))
+        musics = listContainer.find_elements(
+            By.CLASS_NAME, "music-card-container")[0]
+
+        musicCardCover = WebDriverWait(musics, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "music-card-cover")))
+        actions = ActionChains(driver)
+        actions.move_to_element(musicCardCover)
+        actions.perform()
+
+        actions.reset_actions()
+        actions.move_by_offset(545, 305)
+        actions.perform()
+
+        useButton = WebDriverWait(musics, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "css-m2fcla")))
+        useButton.click()
+        logger.debug(green('Music selected'))
+
+        # Set volume to 1%
+        trackElement = WebDriverWait(driver, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "track")))
+        trackOperationGroup = WebDriverWait(trackElement, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "operation-group")))
+        audioOperation = WebDriverWait(trackOperationGroup, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "audioOperation")))
+        audioImage = WebDriverWait(audioOperation, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.TAG_NAME, "img")))
+        audioImage.click()
+
+        volumeContainer = WebDriverWait(audioOperation, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "volume-adjust-container")))
+        addedSongVolumeContainer = volumeContainer.find_elements(
+            By.CLASS_NAME, "volume-line")[1]
+        songVolumeBar = WebDriverWait(addedSongVolumeContainer, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "volume-range")))
+        songVolumeInput = WebDriverWait(songVolumeBar, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "scaleInput")))
+
+        volumeActions = ActionChains(driver)
+        volumeActions.move_to_element(songVolumeInput).perform()
+        volumeActions.reset_actions()
+        volumeActions.move_by_offset(0, 0).perform()
+        volumeActions.move_by_offset(627, 600).perform()
+        volumeActions.click().perform()
+
+        logger.debug(green('Volume descreased to 1%'))
+
+        # Saving the edit
+        saveEditContainer = WebDriverWait(driver, config['explicit_wait']).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "modalHeaderContainer")))
+
+        saveEditButton = saveEditContainer.find_elements(
+            By.TAG_NAME, "button")[1]
+        saveEditButton.click()
+
+        logger.debug(green('Song added correctly'))
 
 
 def _clear(element) -> None:
