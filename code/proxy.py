@@ -16,7 +16,7 @@ def get_proxy(username: str) -> str:
     urls = []
     expired = ""
 
-    req = requests.get(f"{URL}/getproxy?descr={username}&nokey")
+    req = requests.get(f"{URL}/getproxy?nokey")
     proxies = req.json()['list']
 
     # TODO When starting with the real accounts, remove the check on the version "3", only use ipv4 EU private, not shared.

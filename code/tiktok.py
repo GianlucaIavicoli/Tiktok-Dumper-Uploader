@@ -8,136 +8,25 @@ import random
 from pyrogram import Client
 from const import *
 from upload import upload_video
+from db import *
+import pyfiglet
+from simple_term_menu import TerminalMenu
+from time import sleep
 
 
-async def create_session(channel: str):
-    """Create a new session, save the cookies and return it"""
-    async with TikTokApi() as api:
-        await api.create_sessions(ms_tokens="ms_token", num_sessions=1, sleep_after=5)
-        session = api._get_session()
-        cookie = await api.get_session_cookies(session[1])
-        with open(file=f"cookies/{channel}.json", mode="w", encoding="utf-8") as file:
-            json.dump(obj=cookie, fp=file, indent=4)
-
-        return session
+def show_banner():
+    banner = pyfiglet.Figlet(font="slant")
+    text = f"Tiktok NoCLick"
+    render = banner.renderText(text=text)
+    cls()
+    print(f"{GREEN}{render}{RESET}\n{GREEN}Developer: {RED}Gianluca Iavicoli\n{GREEN}Version: {RED}0.0.1\n")
 
 
-def get_cookie(channel: str):
-    """Read the session file and returns the cookies"""
-    with open(file=f"cookies/{channel}.json", mode="r", encoding="utf-8") as file:
-        cookie = json.loads(file.read())
-    return cookie
-
-
-async def dump_channel_videos(channel: str, channelDump: str):
-    # Create default files
-
-    cookie = get_cookie(channel)
-    ms_token = cookie["msToken"]
-    videoUrls = []
-
-    # TODO Add the proxy usage while scraping videos from tiktok
-    async with TikTokApi() as api:
-        await api.create_sessions(ms_tokens=[ms_token], num_sessions=1, sleep_after=10, cookies=[cookie])
-        async for video in api.user(username=channelDump).videos(count=LIMIT_VIDEOS_TO_DUMP):
-            username = video.author.username
-            videoId = video.id
-            description = video.as_dict['desc']
-            song = video.sound.as_dict['music']['title']
-            if song == "original sound":
-                song = None
-
-            url = f"https://www.tiktok.com/@{username}/video/{videoId}"
-
-            videoDict = {
-                "username": username,
-                "videoId": videoId,
-                "description": description,
-                "song": song,
-                "url": url,
-                "channel": channel
-            }
-
-            videoUrls.append(videoDict)
-
-        with open(file="data/dumped.json", mode="r", encoding="utf-8") as file:
-            try:
-                videosAvailable = json.load(file)
-            except:
-                videosAvailable = {"dumped": []}
-
-        [videosAvailable['dumped'].append(
-            newVideo) for newVideo in videoUrls if newVideo not in videosAvailable['dumped']]
-
-        with open(file="data/dumped.json", mode="w", encoding="utf-8") as file:
-            json.dump(videosAvailable, file, indent=4)
-
-        await api.close_sessions()
-        return await telegram_download(videoUrls)
-
-
-# Telegram
-
-async def progress(current, total):
-    print(f"{current * 100 / total:.1f}%")
-
-
-async def telegram_download(videoUrls: list):
-    """Connect, get the videos without the watermark and then delete them from the chat"""
-    async with Client("telegram_session/bot") as client:
-        for videoDict in videoUrls:
-            # Only if the video is not present here
-            if not os.path.exists(f"videos/{videoDict['videoId']}.mp4"):
-                initialMessage = await client.send_message("tikwatermark_remover_bot", videoDict['url'])
-                initialMessageId = initialMessage.id + 2
-                await asyncio.sleep(SLEEP_BETWEEN_SCRAPE_TELEGRAM_VIDEO)
-
-                reponseMessage = await client.get_messages("tikwatermark_remover_bot", initialMessageId)
-                await client.download_media(reponseMessage, progress=progress, file_name=f"videos/{videoDict['videoId']}.mp4")
-            else:
-                print(f"Video {videoDict['videoId']} already downloaded")
-
-
-def upload(channel: str, channelDump: str):
-    with open(file="data/dumped.json", mode="r", encoding="utf-8") as file:
-        videosDumpedDict = json.load(file)
-
-    with open(file="data/uploaded.json", mode="r", encoding="utf-8") as file:
-        videosUploadedDict = json.load(file)
-
-    videosAvailable = []
-    for video in videosDumpedDict['dumped']:
-        if video['username'] == channelDump:
-            videosAvailable.append(video)
-
-    videoToDump = random.choice(videosAvailable)
-
-    upload_video(f"videos/{videoToDump['videoId']}.mp4", description=videoToDump['description'],
-                 song=videoToDump['song'], channel=channel, cookies=f"cookies/{channel}.txt", headless=False, browser='chrome')
-
-    os.remove(f"videos/{videoToDump['videoId']}.mp4")
-    videosAvailable.remove(videoToDump)
-
-    # Add the uploaded video in the right json after being removed from the "dumped.json"
-    videosUploadedDict['uploaded'].append(videoToDump)
-
-    with open(file="data/uploaded.json", mode="w", encoding="utf-8") as file:
-        json.dump(videosUploadedDict, file, indent=4)
-
-    with open(file="data/dumped.json", mode="w", encoding="utf-8") as file:
-        json.dump({"dumped": videosAvailable}, file, indent=4)
+def cls():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def setup():
-
-    # Create files
-    if not os.path.exists("data/dumped.json"):
-        with open("data/dumped.json", "w") as file:
-            json.dump({"dumped": []}, file, indent=4)
-
-    if not os.path.exists("data/uploaded.json"):
-        with open("data/uploaded.json", "w") as file:
-            json.dump({"uploaded": []}, file, indent=4)
 
     # Create dirs
     if not os.path.isdir("cookies"):
@@ -153,11 +42,300 @@ def setup():
         os.mkdir("telegram_session")
 
 
+async def create_session(profile: str):
+    """Create a new session, save the cookies and return it"""
+    async with TikTokApi() as api:
+        await api.create_sessions(ms_tokens="ms_token", num_sessions=1, sleep_after=5)
+        session = api._get_session()
+        cookie = await api.get_session_cookies(session[1])
+        with open(file=f"cookies/{profile}.json", mode="w", encoding="utf-8") as file:
+            json.dump(obj=cookie, fp=file, indent=4)
+
+        return session
+
+
+def get_cookie(profile: str):
+    """Read the session file and returns the cookies"""
+    # TODO with new account it gives "FileNotFoundError"
+
+    with open(file=f"cookies/{profile}.json", mode="r", encoding="utf-8") as file:
+        cookie = json.loads(file.read())
+    return cookie
+
+
+async def dump_channel_videos(profile: str, profileDump: str, videosCount: int):
+
+    cookie = get_cookie(profile)
+    ms_token = cookie["msToken"]
+    videoUrls = []
+
+    # TODO Add the proxy usage while scraping videos from tiktok
+    async with TikTokApi() as api:
+        await api.create_sessions(ms_tokens=[ms_token], num_sessions=1, sleep_after=10, cookies=[cookie])
+        try:
+            async for video in api.user(username=profileDump).videos(count=videosCount):
+                username = video.author.username
+                videoId = video.id
+                description = video.as_dict['desc']
+                song = video.sound.as_dict['music']['title']
+                if song == "original sound":
+                    song = None
+
+                url = f"https://www.tiktok.com/@{username}/video/{videoId}"
+
+                videoDict = {
+                    "videoId": videoId,
+                    "url": url,
+                }
+
+                update_video(videoId, username, description,
+                             song, url, profile)
+
+                videoUrls.append(videoDict)
+        except KeyError:
+            print(f"{GREEN}The user {RED}{profileDump}{GREEN} was not found!")
+            await asyncio.sleep(5)
+            return
+
+        await api.close_sessions()
+        return await telegram_download(videoUrls)
+
+
+# Telegram
+
+async def telegram_download(videoUrls: list):
+    """Connect, get the videos without the watermark and then delete them from the chat"""
+    db, cursor = get_connection()
+    print(f"{GREEN}Videos found: {len(videoUrls)}{RESET}")
+    async with Client("telegram_session/bot") as client:
+        for index, videoDict in enumerate(videoUrls):
+            index += 1
+            videoId = videoDict['videoId']
+            url = videoDict['url']
+
+            if not check_if_video_downloaded(videoId, cursor):
+                initialMessage = await client.send_message("tikwatermark_remover_bot", url)
+                initialMessageId = initialMessage.id + 2
+                await asyncio.sleep(SLEEP_BETWEEN_SCRAPE_TELEGRAM_VIDEO)
+
+                reponseMessage = await client.get_messages("tikwatermark_remover_bot", initialMessageId)
+                await client.download_media(reponseMessage, file_name=f"videos/{videoId}.mp4")
+                update_downloaded_video(videoId, cursor)
+                print(
+                    f"{GREEN}Video {RED}{videoId} {GREEN}downloaded{RESET} - {index}/{len(videoUrls)}")
+            else:
+                print(
+                    f"{GREEN}Video {RED}{videoId} {GREEN}already downloaded{RESET} - {index}/{len(videoUrls)}")
+    db.close()
+    print(f"{GREEN}Process ended correctly!{RESET}")
+    await asyncio.sleep(10)
+    show_banner()
+
+
+def main_menu():
+    show_banner()
+    main_menu_title = f"Choose an option:\nPress Q or Esc to quit. \n"
+    main_menu_items = ["Add profile", "Delete profile",
+                       "Download videos", "Upload Videos", "Exit"]
+    main_menu_exit = False
+
+    main_menu = TerminalMenu(
+        menu_entries=main_menu_items,
+        title=main_menu_title,
+        menu_cursor=MENU_CURSOR,
+        menu_cursor_style=MENU_CURSOR_STYLE,
+        menu_highlight_style=MENU_HIGHLIGHT_STYLE,
+        cycle_cursor=True,
+        clear_screen=False
+    )
+
+    while not main_menu_exit:
+        main_sel = main_menu.show()
+
+        if main_sel == 0:
+            add_profile()
+        elif main_sel == 1:
+            delete_profile()
+        elif main_sel == 2:
+            download_video()
+        elif main_sel == 3:
+            upload()
+        elif main_sel == 4 or main_sel == None:
+            main_menu_exit = True
+            sys.exit(0)
+
+
+def show_profiles(profiles, profilesOptions):
+    for profile in profiles:
+        option = f"{profile[1]} - {profile[2]}"
+        profilesOptions.append(option)
+
+    profileTitle = f"Choose one profile:\nPress Q or Esc to quit. \n"
+    profilesMenu = TerminalMenu(
+        menu_entries=profilesOptions,
+        title=profileTitle,
+        menu_cursor=MENU_CURSOR,
+        menu_cursor_style=MENU_CURSOR_STYLE,
+        menu_highlight_style=MENU_HIGHLIGHT_STYLE,
+        cycle_cursor=True,
+        show_multi_select_hint=True,
+        clear_screen=False,
+    )
+
+    profilesIndex = profilesMenu.show()
+    return profilesIndex
+
+
+def add_profile():
+    addProfileTitle = f"Choose the platform:\nPress Q or Esc to quit."
+    platformOptions = ["tiktok", "youtube", "instagram"]
+    platformMenu = TerminalMenu(
+        menu_entries=platformOptions,
+        title=addProfileTitle,
+        menu_cursor=MENU_CURSOR,
+        menu_cursor_style=MENU_CURSOR_STYLE,
+        menu_highlight_style=MENU_HIGHLIGHT_STYLE,
+        cycle_cursor=True,
+        show_multi_select_hint=True,
+        clear_screen=False,
+    )
+
+    username = input(f"{GREEN}Enter your username: {RESET}")
+    platformIndex = platformMenu.show()
+    if platformIndex is None:
+        return
+
+    platform = platformOptions[platformIndex]
+    cls()
+    show_banner()
+    print(
+        f"{GREEN}Username: {RED}{username} {RESET}- {GREEN}Platform {RED}{platform}{RESET}")
+
+    if db_add_profile(username, platform):
+        print(f"{GREEN}Profile added correctly\nRemember to add the cookies file for this profile in 'cookies/', and rename the file with the username -> '<username>.txt'{RESET}")
+        sleep(10)
+        cls()
+        show_banner()
+    else:
+        print(f"{RED}Something went wrong...{RESET}")
+        sleep(2)
+        cls()
+        show_banner()
+
+
+def delete_profile():
+    profilesOptions = []
+    profiles = get_profiles()
+
+    for profile in profiles:
+        option = f"{profile[1]} - {profile[2]}"
+        profilesOptions.append(option)
+
+    deleteProfileTitle = f"Choose one or more profile to delete:\nPress Q or Esc to quit. \n"
+    deleteProfileMenu = TerminalMenu(
+        menu_entries=profilesOptions,
+        title=deleteProfileTitle,
+        menu_cursor=MENU_CURSOR,
+        menu_cursor_style=MENU_CURSOR_STYLE,
+        menu_highlight_style=MENU_HIGHLIGHT_STYLE,
+        multi_select=True,
+        cycle_cursor=True,
+        show_multi_select_hint=True,
+        clear_screen=False,
+    )
+
+    deleteProfileIndex = deleteProfileMenu.show()
+
+    if deleteProfileIndex is None:
+        return
+
+    for index in deleteProfileIndex:
+        profileId = profiles[index][0]
+        username = profiles[index][1]
+        db_delete_profile(profileId)
+        print(f"{GREEN}Profile {RED}{username}{GREEN} eliminated correctly{RESET}")
+        sleep(3)
+        show_banner()
+
+
+def download_video():
+    profilesOptions = []
+    profiles = get_profiles()
+
+    profilesIndex = show_profiles(profiles, profilesOptions)
+
+    if profilesIndex is None:
+        return
+
+    profile = profiles[profilesIndex][1]
+
+    profileDump = input(
+        f"{GREEN}Enter the username of the channel u want to dump: {RESET}")
+
+    if len(profileDump) < 3:
+        print(f"{RED}The username is not valid, try again...{RESET}")
+        sleep(2)
+        return
+
+    try:
+        videosCount = int(input(
+            f"{GREEN}Enter the number of videos to dump (does not change much, even with count = 1 it will download at least 10): {RESET}"))
+    except ValueError:
+        print(f"{RED}Enter a valid number next time, try again...{RESET}")
+        sleep(2)
+        return
+
+    show_banner()
+    print(f"{GREEN}Starting process...{RESET}")
+
+    asyncio.run(dump_channel_videos(profile, profileDump, videosCount))
+
+
+def upload():
+    profilesOptions = []
+    profiles = get_profiles()
+
+    profilesIndex = show_profiles(profiles, profilesOptions)
+
+    if profilesIndex is None:
+        return
+
+    profile = profiles[profilesIndex][1]
+
+    videosAvailable = get_videos(profile)
+
+    """chooseVideoTitle = f"Choose a video to upload:\nPress Q or Esc to quit. \n"
+    chooseVideoeMenu = TerminalMenu(
+        menu_entries=profilesOptions,
+        title=chooseVideoTitle,
+        menu_cursor=MENU_CURSOR,
+        menu_cursor_style=MENU_CURSOR_STYLE,
+        menu_highlight_style=MENU_HIGHLIGHT_STYLE,
+        cycle_cursor=True,
+        show_multi_select_hint=True,
+        clear_screen=False,
+    )
+
+    chooseVideoIndex = chooseVideoeMenu.show()
+
+    if chooseVideoIndex is None:
+        return"""
+
+    videoId, description, song = random.choice(videosAvailable)
+
+    upload_video(f"videos/{videoId}.mp4", description=description,
+                 song=song, profile=profile, cookies=f"cookies/{profile}.txt", headless=False, browser='chrome')
+
+    os.remove(f"videos/{videoId}.mp4")
+    update_uploaded_video(videoId)
+    sleep(10)
+    show_banner()
+
+
 if __name__ == "__main__":
-    channel = "__copyandpaste"
-    channelDump = "__copyandpaste"
     setup()
-    if channel not in CHANNELS:
-        raise Exception("Wrong channel name")
-    # asyncio.run(dump_channel_videos(channel, channelDump))
-    upload(channel, channelDump)
+    setup_database()
+    main_menu()
+
+
+# respectsofficial2

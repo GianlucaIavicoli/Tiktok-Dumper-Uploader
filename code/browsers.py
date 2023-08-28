@@ -34,10 +34,10 @@ def get_browser(name: str = 'chrome', options=None, *args, **kwargs) -> webdrive
     service = get_service(name=name)
     if service:
         driver = driver_to_use(
-            service=service, options=options, seleniumwire_options=seleniumwireOptions)
+            service=service, options=options)
     else:
         driver = driver_to_use(
-            options=options, seleniumwire_options=seleniumwireOptions)
+            options=options)
 
     driver.implicitly_wait(config['implicit_wait'])
     driver.execute_script(
@@ -85,7 +85,7 @@ def chrome_defaults(*args, headless: bool = False, **kwargs) -> ChromeOptions:
     """
     Creates Chrome with Options
     """
-    username = kwargs.get("channel")  # Used to pick the right proxy
+    profile = kwargs.get("profile")  # Used to pick the right proxy
     options = ChromeOptions()
 
     # regular
@@ -101,8 +101,8 @@ def chrome_defaults(*args, headless: bool = False, **kwargs) -> ChromeOptions:
     # experimental
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
-
-    proxyUrl = get_proxy(username)
+    # TODO Option to use proxy
+    proxyUrl = get_proxy(profile)
     seleniumwireOptions = {
         "proxy": {
             "http": proxyUrl,

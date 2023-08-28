@@ -168,6 +168,6 @@ code/*.mp3
 code/background/*.mp4
 
 code/videos
-code/telegram_sessions
+code/telegram_session/*.session
 code/data
 code/cookies
