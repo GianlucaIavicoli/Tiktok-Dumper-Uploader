@@ -331,7 +331,6 @@ def upload():
 
     os.remove(f"videos/{videoId}.mp4")
     update_uploaded_video(videoId)
-    sleep(10)
     show_banner()
 
 
