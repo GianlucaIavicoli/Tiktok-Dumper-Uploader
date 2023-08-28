@@ -302,11 +302,16 @@ def upload():
 
     profile = profiles[profilesIndex][1]
 
+    videosOptions = []
     videosAvailable = get_videos(profile)
 
-    """chooseVideoTitle = f"Choose a video to upload:\nPress Q or Esc to quit. \n"
-    chooseVideoeMenu = TerminalMenu(
-        menu_entries=profilesOptions,
+    for video in videosAvailable:
+        option = f"{video[1]} - {video[3]} - {video[4]}"
+        videosOptions.append(option)
+
+    chooseVideoTitle = f"Choose a video to upload:\nPress Q or Esc to quit. \n"
+    chooseVideoMenu = TerminalMenu(
+        menu_entries=videosOptions,
         title=chooseVideoTitle,
         menu_cursor=MENU_CURSOR,
         menu_cursor_style=MENU_CURSOR_STYLE,
@@ -316,12 +321,14 @@ def upload():
         clear_screen=False,
     )
 
-    chooseVideoIndex = chooseVideoeMenu.show()
+    chooseVideoIndex = chooseVideoMenu.show()
 
     if chooseVideoIndex is None:
-        return"""
+        return
 
-    videoId, description, song = random.choice(videosAvailable)
+    videoId = videosAvailable[chooseVideoIndex][0]
+    description = videosAvailable[chooseVideoIndex][2]
+    song = videosAvailable[chooseVideoIndex][3]
 
     upload_video(f"videos/{videoId}.mp4", description=description,
                  song=song, profile=profile, cookies=f"cookies/{profile}.txt", headless=False, browser='chrome')

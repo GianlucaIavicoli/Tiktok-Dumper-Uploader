@@ -109,7 +109,7 @@ def check_if_profile_already_exist(profile: str, platform: str, cursor) -> bool:
 def get_videos(profile: str) -> list[set]:
     db, cursor = get_connection()
 
-    getQuery = """SELECT id, description, song FROM videos where uploaded = 0 AND downloaded = 1 AND profile_id = (SELECT id from personal_profile where username = %s)
+    getQuery = """SELECT id, username, description, song, url FROM videos where uploaded = 0 AND downloaded = 1 AND profile_id = (SELECT id from personal_profile where username = %s)
     """
     cursor.execute(getQuery, (profile,))
     results = cursor.fetchall()
