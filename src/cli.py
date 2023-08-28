@@ -208,7 +208,7 @@ def add_profile():
         f"{GREEN}Username: {RED}{username} {RESET}- {GREEN}Platform {RED}{platform}{RESET}")
 
     if db_add_profile(username, platform):
-        print(f"{GREEN}Profile added correctly\nRemember to add the cookies file for this profile in 'cookies/', and rename the file with the username -> '<username>.txt'{RESET}")
+        print(f"{GREEN}Profile added correctly\nRemember to add the cookies file for this profile in '{COOKIES_PATH}', and rename the file with the username -> '<username>.txt'{RESET}")
         sleep(10)
         cls()
         show_banner()
