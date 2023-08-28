@@ -15,4 +15,6 @@ MENU_CURSOR_STYLE = ("fg_red", "bold")
 MENU_HIGHLIGHT_STYLE = ("fg_green", "fg_green")
 
 
-# TODO Add all path here
+COOKIES_PATH = "cookies/"
+VIDEOS_PATH = "videos/"
+TELEGRAM_SESSIONS_PATH = "telegram_session"

@@ -1,3 +1,4 @@
 - [] Add the proxy usage while scraping videos from tiktok
 - [x] Fix the get_proxy function in proxy.py for both IPv4 and IPv6. Additionally, ensure that the username of the account is included in the description of each individual proxy when making a purchase. Lastly, implement a username checking mechanism when fetching the proxies.
-- [] Fix this in the upload.py -> Message: no such element: Unable to locate element: {"method":"xpath","selector":"//input[@type='file']"}
+- [x] Fix this in the upload.py -> Message: no such element: Unable to locate element: {"method":"xpath","selector":"//input[@type='file']"}
+- [] Create docstrings for all the functions

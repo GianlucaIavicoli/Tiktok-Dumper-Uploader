@@ -4,7 +4,6 @@ from TikTokApi import TikTokApi
 import asyncio
 import sys
 import os
-import random
 from pyrogram import Client
 from const import *
 from upload import upload_video
@@ -15,11 +14,11 @@ from time import sleep
 
 
 def show_banner():
-    banner = pyfiglet.Figlet(font="slant")
-    text = f"Tiktok NoCLick"
+    banner = pyfiglet.Figlet(font="big")
+    text = f"Tiktok Dumper"
     render = banner.renderText(text=text)
     cls()
-    print(f"{GREEN}{render}{RESET}\n{GREEN}Developer: {RED}Gianluca Iavicoli\n{GREEN}Version: {RED}0.0.1\n")
+    print(f"{GREEN}{render}{RESET}\n{GREEN}Version: {RED}1.0.0\n")
 
 
 def cls():
@@ -29,17 +28,14 @@ def cls():
 def setup():
 
     # Create dirs
-    if not os.path.isdir("cookies"):
-        os.mkdir("cookies")
+    if not os.path.isdir(COOKIES_PATH):
+        os.mkdir(COOKIES_PATH)
 
-    if not os.path.isdir("videos"):
-        os.mkdir("videos")
+    if not os.path.isdir(VIDEOS_PATH):
+        os.mkdir(VIDEOS_PATH)
 
-    if not os.path.isdir("data"):
-        os.mkdir("data")
-
-    if not os.path.isdir("telegram_session"):
-        os.mkdir("telegram_session")
+    if not os.path.isdir(TELEGRAM_SESSIONS_PATH):
+        os.mkdir(TELEGRAM_SESSIONS_PATH)
 
 
 async def create_session(profile: str):

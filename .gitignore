@@ -161,13 +161,13 @@ cython_debug/
 
 # MP3 (Edge-TTS)
 *.mp3
-code/*.mp3
+src/*.mp3
 
 # MP4
 *.mp4
-code/background/*.mp4
+src/background/*.mp4
 
-code/videos
-code/telegram_session/*.session
-code/data
-code/cookies
+src/videos
+src/telegram_session/*.session
+src/data
+src/cookies
