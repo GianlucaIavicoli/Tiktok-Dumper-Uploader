@@ -2,6 +2,8 @@
 
 The Tiktok-Dumper-Uploader is a powerful script designed for downloading videos from TikTok and re-uploading them without any effort. The script offers a Command-Line Interface (CLI) for multi-account handling, profile management, and proxy support.
 
+![alt text](src/images/tiktok-cli.png?raw=true)
+
 ## Features
 
 - **Video Downloads**: Easily download videos from TikTok without watermark, and efficiently re-upload them to the same or alternative platforms.
