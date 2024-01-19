@@ -68,16 +68,6 @@ We would like to express our gratitude to the following repositories and project
 - [simple-term-menu](https://github.com/IngoMeyer441/simple-term-menu)
 - [TikTok Watermark Remover](https://t.me/tikwatermark_remover_bot)
 
-## Future Updates
-
-We're dedicated to enhancing the Tiktok-Dumper-Uploader with upcoming features:
-
-- **YouTube Integration**: Download and upload videos from YouTube, extending content sharing options.
-
-- **Instagram Support**: Integrate Instagram capabilities to manage video download and re-uploads.
-
-- **Reddit Sharing**: Share downloaded content on Reddit effortlessly for broader exposure.
-
 ## Contributions
 
 Contributions are welcome! If you'd like to enhance the tool or fix issues, please open an issue or submit a pull request.
